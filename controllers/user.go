@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/EeveesEyes/antilope-backend/db"
 	"github.com/EeveesEyes/antilope-backend/models"
 	"github.com/gin-gonic/gin"
 	"log"
 )
-
-var Users []*models.User
 
 func Ping(c *gin.Context) {
 	c.JSON(200, gin.H{
@@ -18,10 +18,17 @@ func Ping(c *gin.Context) {
 func CreateUser(c *gin.Context) {
 	user, err := GetValidUserFromRequest(c)
 	if err != nil {
+		if err.Error() == "weak password" {
+			return
+		}
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	Users = append(Users, user)
+	if !db.UniqueEmail(user.Email) {
+		c.JSON(400, gin.H{"error": "email is duplicate"})
+		return
+	}
+	db.SaveUser(user)
 	jwt, err := generateJWT(user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -48,14 +55,22 @@ func GetValidUserFromRequest(c *gin.Context) (*models.User, error) {
 		return nil, err
 	}
 
+	if result, unmarshalErr := ValidatePassword(userReq.UserData.Password); unmarshalErr != nil {
+		return nil, unmarshalErr
+	} else if !result.Strong {
+		c.JSON(400, gin.H{"error": result.Errors})
+		return nil, fmt.Errorf("weak password")
+	}
+
 	hash, pepperID, err := HashPassword(userReq.UserData.Password)
+	userReq.UserData.Password = GetRandString(len(userReq.UserData.Password))
 	if err != nil {
 		return nil, err
 	}
 
 	return models.NewUser(
 		userReq.UserData.Username,
-		userReq.UserData.Password,
+		userReq.UserData.Email,
 		hash,
 		pepperID), err
 }

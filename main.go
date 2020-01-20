@@ -11,7 +11,7 @@ func main() {
 	api := router.Group("/api")
 	routes.CreateRoutes(api)
 
-	handleGenericError(router.Run(":8000"))
+	handleGenericError(router.Run(":9000"))
 }
 
 func handleGenericError(err error) {
