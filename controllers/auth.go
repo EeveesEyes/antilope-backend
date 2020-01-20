@@ -5,6 +5,7 @@ import (
 	"github.com/EeveesEyes/antilope-backend/models"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"time"
 )
 
@@ -51,7 +52,7 @@ func HashPassword(password string) (hash string, pepperID int, err error) {
 	return
 }
 
-func validatePassword(password string, user models.User) bool {
+func ValidatePassword(password string, user models.User) bool {
 	flavouredPW := flavourPassword(password, user.PepperID)
 	match := bcrypt.CompareHashAndPassword([]byte(user.Hash), []byte(flavouredPW))
 	return match == nil
@@ -61,27 +62,36 @@ func generateJWT(user *models.User) (tokenString string, err error) {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": user.Email,
-		"id":    user.Id,
-		"nbf":   time.Now().Add(time.Hour * 1).Unix(),
+		"iss": user.Email,
+		"aud": "antilope",
+		"exp": time.Now().Add(time.Hour * 1).Unix(),
+		"nbf": time.Now(),
 	})
-
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err = token.SignedString([]byte(hmacSampleSecret))
 	return
 }
 
-func validateJWT(tokenString string) bool {
+func validateJWT(tokenString, userEmail string) bool {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(hmacSampleSecret), nil
 	})
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println(claims["email"], claims["id"], claims["nbf"])
-		return true
+	if err != nil {
+		log.Println(err.Error())
+		return false
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if claims.VerifyIssuer(userEmail, true) &&
+			claims.VerifyAudience("antilope", true) &&
+			claims.VerifyExpiresAt(time.Now().Unix(), true) &&
+			claims.VerifyNotBefore(time.Now().Unix(), true) {
+			token.Valid = true
+			return true
+		}
+		return false
 	} else {
 		fmt.Println(err)
 		return false

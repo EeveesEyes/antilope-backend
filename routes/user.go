@@ -9,4 +9,6 @@ func CreateRoutes(router gin.IRouter) {
 	router.GET("/ping", controllers.Ping)
 	router.POST("/users/", controllers.CreateUser)
 	router.GET("/users/", controllers.GetAllUsers)
+	router.DELETE("/users/", controllers.DeleteAllUsers)
+	router.POST("/users/login/", controllers.Login)
 }

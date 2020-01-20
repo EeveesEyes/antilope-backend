@@ -14,7 +14,7 @@ func GetRandString(n int) string {
 	return string(p)
 }
 
-func ValidatePassword(password string) (owasp.TestResult, error) {
+func TestPasswordStrength(password string) (owasp.TestResult, error) {
 	passwordConfig := owasp.DefaultPasswordConfig()
 	jsonResult, _ := passwordConfig.TestPassword(password)
 	var result owasp.TestResult
