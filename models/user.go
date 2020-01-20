@@ -1,7 +1,7 @@
 package models
 
 type User struct {
-	Id       string
+	Id       int
 	Username string
 	Email    string
 	// password
@@ -29,8 +29,9 @@ type UserAuthResponse struct {
 	Token    string
 }
 
-func NewUser(username, email, hash string, pepperID int) *User {
+func NewUser(id int, username, email, hash string, pepperID int) *User {
 	return &User{
+		Id:       id,
 		Username: username,
 		Email:    email,
 		Hash:     hash,

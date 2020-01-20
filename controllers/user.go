@@ -9,6 +9,8 @@ import (
 	"log"
 )
 
+var IsProduction bool
+
 func Ping(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "pong",
@@ -43,6 +45,21 @@ func CreateUser(c *gin.Context) {
 	c.JSON(201, gin.H{"user": userAuthResponse})
 }
 
+func GetAllUsers(c *gin.Context) {
+	if IsProduction {
+		c.Status(405)
+		return
+	}
+	result, err := db.GetAllUsers()
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		log.Println(err)
+		return
+	}
+	c.JSON(200, gin.H{"users": result})
+	return
+}
+
 // Validators:
 func GetValidUserFromRequest(c *gin.Context) (*models.User, error) {
 	var userReq models.UserRequest
@@ -69,6 +86,7 @@ func GetValidUserFromRequest(c *gin.Context) (*models.User, error) {
 	}
 
 	return models.NewUser(
+		db.NextId,
 		userReq.UserData.Username,
 		userReq.UserData.Email,
 		hash,
