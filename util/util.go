@@ -1,8 +1,7 @@
-package controllers
+package util
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/EeveesEyes/owasp-password-strength-test"
 	"math/rand"
 )
@@ -10,7 +9,6 @@ import (
 func GetRandString(n int) string {
 	p := make([]byte, n)
 	rand.Read(p)
-	fmt.Println(p)
 	return string(p)
 }
 

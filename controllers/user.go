@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/EeveesEyes/antilope-backend/db"
 	"github.com/EeveesEyes/antilope-backend/models"
+	"github.com/EeveesEyes/antilope-backend/util"
 	"github.com/gin-gonic/gin"
 	"log"
+	"net/http"
 )
 
 var IsProduction bool
@@ -17,6 +19,24 @@ func Ping(c *gin.Context) {
 	})
 }
 
+/*
+	expects json request body:
+{
+  "user": {
+	"username": "stephan",
+    "email": "test@test.de",
+    "password": "Str0ngP4ssW%rd"
+  }
+}
+	returns json response in format:
+{
+	"user": {
+		"Username": "stephan",
+		"Email": "test@test.de",
+		"Token": "<JWT-Token>"
+	}
+}
+*/
 func CreateUser(c *gin.Context) {
 	user, err := GetValidUserFromRequest(c)
 	if err != nil {
@@ -31,7 +51,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 	db.SaveUser(user)
-	jwt, err := generateJWT(user)
+	jwt, err := util.GenerateJWT(user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		log.Println(err)
@@ -75,6 +95,23 @@ func DeleteAllUsers(c *gin.Context) {
 	return
 }
 
+/*
+	Expects json request body:
+{
+	"user": {
+    "email": "test@test.de",
+    "password": "Str0ngP4ssW%rd"
+  }
+}
+	returns json response:
+{
+	"user": {
+		"Username": "stephan",		// TODO: remove Username
+		"Email": "test@test.de",	// TODO: remove email
+		"Token": "<JWT-Token>"
+	}
+}
+*/
 func Login(c *gin.Context) {
 	var userReq models.UserRequest
 	bodyData, err := c.GetRawData()
@@ -99,20 +136,20 @@ func Login(c *gin.Context) {
 	validPW := false
 	user, err := db.GetUser(userReq.UserData.Email)
 	if err == nil {
-		validPW = ValidatePassword(userReq.UserData.Password, *user)
+		validPW = util.ValidatePassword(userReq.UserData.Password, *user)
 	} else {
 		// Timing can be used to get information about user presence, delay invalid requests
 		emptyUser := models.User{}
-		_ = ValidatePassword(userReq.UserData.Password, emptyUser)
+		_ = util.ValidatePassword(userReq.UserData.Password, emptyUser)
 	}
 	if !validPW || err != nil {
 		c.JSON(401, gin.H{"error": "invalid email or password"})
 		return
 	}
-	jwt, err := generateJWT(user)
+	jwt, err := util.GenerateJWT(user)
 	userAuthResponse := models.UserAuthResponse{
-		Username: user.Username,
-		Email:    user.Email,
+		Username: user.Username, // TODO: remove
+		Email:    user.Email,    // TODO: remove
 		Token:    jwt,
 	}
 	if err != nil {
@@ -121,6 +158,55 @@ func Login(c *gin.Context) {
 		return
 	}
 	c.JSON(201, gin.H{"user": userAuthResponse})
+}
+
+/*
+	expects json request body:
+{
+	"token": "<JWT-Token>"
+}
+	returns empty body
+*/
+func Logout(c *gin.Context) {
+	type LogoutReq struct {
+		Token string `json:"token" binding:"required"`
+	}
+	var logoutReq LogoutReq
+	bodyData, err := c.GetRawData()
+	if err != nil {
+		log.Println(err.Error())
+		c.Status(500)
+		return
+	}
+	err = json.Unmarshal(bodyData, &logoutReq)
+	if err != nil {
+		log.Println(err.Error())
+		c.Status(400)
+		return
+	}
+	if logoutReq.Token == "" {
+		c.JSON(401, gin.H{"error": "token is required"})
+		return
+	}
+	if err := util.InvalidateToken(logoutReq.Token); err != nil {
+		c.JSON(401, gin.H{"error": err.Error()})
+	}
+
+	c.Status(200)
+}
+
+func Test(c *gin.Context) {
+	var body struct {
+		Information string `json:"information" binding:"required"`
+		Test        string `json:"test" binding:"required"`
+		Test2       string `json:"test2" binding:"required"`
+	}
+
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	fmt.Println(body.Information, body.Test, body.Test2)
 }
 
 // Validators:
@@ -135,15 +221,15 @@ func GetValidUserFromRequest(c *gin.Context) (*models.User, error) {
 		return nil, err
 	}
 
-	if result, unmarshalErr := TestPasswordStrength(userReq.UserData.Password); unmarshalErr != nil {
+	if result, unmarshalErr := util.TestPasswordStrength(userReq.UserData.Password); unmarshalErr != nil {
 		return nil, unmarshalErr
 	} else if !result.Strong {
 		c.JSON(400, gin.H{"error": result.Errors})
 		return nil, fmt.Errorf("weak password")
 	}
 
-	hash, pepperID, err := HashPassword(userReq.UserData.Password)
-	userReq.UserData.Password = GetRandString(len(userReq.UserData.Password))
+	hash, pepperID, err := util.HashPassword(userReq.UserData.Password)
+	userReq.UserData.Password = util.GetRandString(len(userReq.UserData.Password))
 	if err != nil {
 		return nil, err
 	}
