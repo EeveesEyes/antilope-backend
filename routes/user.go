@@ -14,5 +14,4 @@ func CreateRoutes(router gin.IRouter) {
 	router.POST("/users/logout/", controllers.Logout)
 	router.GET("/secrets", controllers.GetSecret)
 	router.POST("/secrets", controllers.CreateSecret)
-	router.POST("/test", controllers.Test)
 }

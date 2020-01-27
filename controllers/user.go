@@ -8,7 +8,6 @@ import (
 	"github.com/EeveesEyes/antilope-backend/util"
 	"github.com/gin-gonic/gin"
 	"log"
-	"net/http"
 )
 
 var IsProduction bool
@@ -31,8 +30,6 @@ func Ping(c *gin.Context) {
 	returns json response in format:
 {
 	"user": {
-		"Username": "stephan",
-		"Email": "test@test.de",
 		"Token": "<JWT-Token>"
 	}
 }
@@ -57,11 +54,7 @@ func CreateUser(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	userAuthResponse := models.UserAuthResponse{
-		Username: user.Username,
-		Email:    user.Email,
-		Token:    jwt,
-	}
+	userAuthResponse := struct{ Token string }{Token: jwt}
 	c.JSON(201, gin.H{"user": userAuthResponse})
 }
 
@@ -106,14 +99,19 @@ func DeleteAllUsers(c *gin.Context) {
 	returns json response:
 {
 	"user": {
-		"Username": "stephan",		// TODO: remove Username
-		"Email": "test@test.de",	// TODO: remove email
 		"Token": "<JWT-Token>"
 	}
 }
 */
 func Login(c *gin.Context) {
-	var userReq models.UserRequest
+	var userReq struct {
+		UserData struct {
+			Username string `json:"username" binding:"required"`
+			Email    string `json:"email" binding:"required"`
+			Password string `json:"password" binding:"required"`
+		} `json:"user" binding:"required"`
+	}
+
 	bodyData, err := c.GetRawData()
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -147,16 +145,15 @@ func Login(c *gin.Context) {
 		return
 	}
 	jwt, err := util.GenerateJWT(user)
-	userAuthResponse := models.UserAuthResponse{
-		Username: user.Username, // TODO: remove
-		Email:    user.Email,    // TODO: remove
-		Token:    jwt,
-	}
+
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		log.Println(err.Error())
 		return
 	}
+	userAuthResponse := struct {
+		Token string
+	}{Token: jwt}
 	c.JSON(201, gin.H{"user": userAuthResponse})
 }
 
@@ -193,20 +190,6 @@ func Logout(c *gin.Context) {
 	}
 
 	c.Status(200)
-}
-
-func Test(c *gin.Context) {
-	var body struct {
-		Information string `json:"information" binding:"required"`
-		Test        string `json:"test" binding:"required"`
-		Test2       string `json:"test2" binding:"required"`
-	}
-
-	if err := c.BindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	fmt.Println(body.Information, body.Test, body.Test2)
 }
 
 // Validators:

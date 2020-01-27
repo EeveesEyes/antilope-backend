@@ -19,16 +19,6 @@ type UserRequest struct {
 	UserData CreateUserData `json:"user"`
 }
 
-type UserResponse struct {
-	UserData UserAuthResponse `json:"user"`
-}
-
-type UserAuthResponse struct {
-	Username string
-	Email    string
-	Token    string
-}
-
 func NewUser(id int, username, email, hash string, pepperID int) *User {
 	return &User{
 		Id:       id,
