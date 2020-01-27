@@ -89,10 +89,18 @@ func ValidateJWT(tokenString, userEmail string) bool {
 		return false
 	}
 	if claims, ok := GetTokenClaims(token); ok {
+		var isUserToken bool
+		if user, err := db.GetUser(claims["iss"].(string)); err != nil {
+			log.Println(err.Error())
+			return false
+		} else if user.CurrentJWT == tokenString {
+			isUserToken = true
+		}
 		if claims.VerifyIssuer(userEmail, userEmail != "") &&
 			claims.VerifyAudience("antilope", true) &&
 			claims.VerifyExpiresAt(time.Now().Unix(), true) &&
-			claims.VerifyNotBefore(time.Now().Unix(), true) {
+			claims.VerifyNotBefore(time.Now().Unix(), true) &&
+			isUserToken {
 			token.Valid = true
 			return true
 		}

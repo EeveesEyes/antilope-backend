@@ -5,8 +5,9 @@ type User struct {
 	Username string
 	Email    string
 	// password
-	Hash     string
-	PepperID int
+	Hash       string
+	PepperID   int
+	CurrentJWT string
 }
 
 type CreateUserData struct {

@@ -47,13 +47,14 @@ func CreateUser(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "email is duplicate"})
 		return
 	}
-	db.SaveUser(user)
 	jwt, err := util.GenerateJWT(user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		log.Println(err)
 		return
 	}
+	user.CurrentJWT = jwt
+	db.SaveUser(user)
 	userAuthResponse := struct{ Token string }{Token: jwt}
 	c.JSON(201, gin.H{"user": userAuthResponse})
 }
@@ -145,7 +146,7 @@ func Login(c *gin.Context) {
 		return
 	}
 	jwt, err := util.GenerateJWT(user)
-
+	db.SaveUser(user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		log.Println(err.Error())
