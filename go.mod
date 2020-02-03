@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/EeveesEyes/owasp-password-strength-test v0.0.0-20200119222549-32d8f8e8889b
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/garyburd/redigo v1.6.0
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect

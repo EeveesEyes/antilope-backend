@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var Peppers = map[int]string{
+/*var Peppers = map[int]string{
 	4:  "8D9Aec5e9B080Bde71cfc80355a65CdC",
 	5:  "A6E2d5d4F2fA4a5a76F354C17f3AcDDe",
 	6:  "aB76BfAfB5ced4Db4eB2C1006BbE0afF",
@@ -21,24 +21,25 @@ var Peppers = map[int]string{
 } //make(map[int]string)
 
 const hmacSampleSecret = "A6E2d5d4F2fA4a5a76F354C17f3AcDDeAeDEDaD"
-
+*/
 //const ExpirationTime = time.Hour * 1
 const ExpirationTime = time.Minute * 20
 
 var LastClear time.Time
 
 func flavourPassword(password string, pepperID int) string {
-	return Peppers[pepperID] + password
+	return db.GetPeppers()[pepperID] + password
 }
 
 func getLatestPepperID() int {
-	keys := make([]int, len(Peppers))
+	peppers := db.GetPeppers()
+	keys := make([]int, len(peppers))
 	i := 0
-	for k := range Peppers {
+	for k := range peppers {
 		keys[i] = k
 		i++
 	}
-	if len(Peppers) == 0 {
+	if len(peppers) == 0 {
 		panic("Missing pepper!")
 	}
 	maxValue := keys[0]
@@ -74,7 +75,7 @@ func GenerateJWT(user *models.User) (tokenString string, err error) {
 		"nbf": time.Now(),
 	})
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err = token.SignedString([]byte(hmacSampleSecret))
+	tokenString, err = token.SignedString([]byte(db.GetHmacSecret()))
 	return
 }
 
@@ -138,7 +139,7 @@ func GetToken(tokenString string) (token *jwt.Token, err error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(hmacSampleSecret), nil
+		return []byte(db.GetHmacSecret()), nil
 	})
 	if err != nil {
 		log.Println(err.Error())

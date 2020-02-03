@@ -14,12 +14,18 @@ func GetSecret(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "Authorization header is required"})
 		return
 	}
-	secretId := c.GetInt("SecretId")
-	if secretId == 0 {
-		c.JSON(400, gin.H{"error": "SecretId is required"})
+	var body struct {
+		SecretId int `json:"secretId" binding:"required"`
+	}
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	secret := db.GetSecret(secretId)
+	secret := db.GetSecret(body.SecretId)
+	if secret.AuthorizedUser == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "secretId not found"})
+		return
+	}
 	user, err := db.GetUserById(secret.AuthorizedUser)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -28,10 +34,10 @@ func GetSecret(c *gin.Context) {
 		c.Status(401)
 	}
 	secretResponse := struct {
-		secretId          int
-		secretInformation string
+		SecretId          int
+		SecretInformation string
 	}{secret.Id, secret.Information}
-	c.JSON(201, gin.H{"user": secretResponse})
+	c.JSON(201, gin.H{"secret": secretResponse})
 }
 
 /*
